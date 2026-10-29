@@ -79,7 +79,8 @@
 
   // Timings
   const MERGE_ANIM = 0.1;            // old balls hollow out into rings over 0.1 s
-  const DANGER_TIME = 1.83;          // red line blinks this long before game over
+  const DANGER_TIME = 3.66;          // red line blinks this long before game over
+  const MIN_DROP_DELAY = 0.75;       // minimum time between two drops
   const BLINK_PERIOD = 0.5;
   const BLINK_ON = 1 / 6;
   // Game-over panel drop-in keyframes, one every 2/60 s (offset of the panel in pt)
@@ -292,7 +293,8 @@
     world.step(STEP, 20, 20);
     processMerges();
 
-    if (state.dropped && (state.loadNext || state.time - state.dropped.droppedAt > 3)) {
+    const sinceDrop = state.dropped ? state.time - state.dropped.droppedAt : 0;
+    if (state.dropped && sinceDrop >= MIN_DROP_DELAY && (state.loadNext || sinceDrop > 3)) {
       state.dropped = null;
       state.loadNext = false;
       state.current = state.next;
