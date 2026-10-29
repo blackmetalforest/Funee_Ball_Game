@@ -1,0 +1,8 @@
+# large media files
+*.mp4
+*.mov
+
+.DS_Store
+
+# local tooling
+.claude/
