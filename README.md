@@ -4,7 +4,7 @@
 
 A pixel-art "drop and merge" ball game for the browser. Drop balls from the cloud; two
 balls of the same kind merge into the next size up. Two beach balls (the largest) cancel each
-other out. The game ends when the pile sticks out over the rim of the box for about 2 seconds.
+other out. The game ends when the pile sticks out over the rim of the box for about 3.7 seconds.
 
 Plain HTML, CSS and JavaScript with no build step. Physics uses [planck.js](https://github.com/piqnt/planck.js)
 (a Box2D port), vendored in `vendor/`.
@@ -19,7 +19,8 @@ Then open <http://localhost:8048>. Opening `index.html` directly also works.
 
 ## Controls
 
-- **Touch or mouse:** move the cloud by dragging (or hovering, with a mouse). Release or click to drop.
+- **Touch:** drag anywhere to slide the cloud (it moves relative to your finger, not to where you touch). Tap to drop.
+- **Mouse:** the cloud follows the cursor. Click to drop.
 - **Keyboard:** ← / → (or A / D) to move, Space / ↓ / Enter to drop.
 
 ## Rules and numbers
@@ -39,7 +40,7 @@ Then open <http://localhost:8048>. Opening `index.html` directly also works.
 | 11 | Beach ball | 172      | 10,240 (both disappear) |
 
 - Only the five smallest balls are dropped, chosen at random.
-- The next ball loads as soon as the dropped ball touches something.
+- The next ball loads once the dropped ball touches something, and no sooner than 0.75 s after the drop.
 - Gravity is 1434 pt/s² with linear damping of 1.06/s and restitution of about 0.25.
 - A merged ball appears at the midpoint of the pair. The two old balls hollow out into rings over 0.1 s.
 - High scores (top 10) are stored in the browser's `localStorage`.

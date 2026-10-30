@@ -522,7 +522,13 @@
   }
   const inBtn = (p, y) => p.x >= BTN_X && p.x <= BTN_X + BTN_W && p.y >= y && p.y <= y + BTN_H;
 
+  // Mouse: the cloud follows the cursor, click to drop.
+  // Touch: dragging moves the cloud relative to its current position (like a trackpad);
+  // a quick tap without dragging drops the ball.
+  const TAP_SLOP = 8;        // pt of finger movement allowed for a tap
+  const TAP_TIME = 300;      // ms
   let pointerDown = false;
+  let touch = null;          // { id, startX, lastX, startT, moved }
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
@@ -547,23 +553,43 @@
       return;
     }
     if (p.x < 70 && p.y > 60 && p.y < 125) { screen = 'title'; return; }
-    pointerDown = true;
-    state.cloudX = clampCloud(p.x);
+    if (e.pointerType === 'mouse') {
+      pointerDown = true;
+      state.cloudX = clampCloud(p.x);
+    } else if (!touch) {
+      touch = { id: e.pointerId, startX: p.x, lastX: p.x, startT: performance.now(), moved: false };
+    }
   });
   canvas.addEventListener('pointermove', (e) => {
     if (screen !== 'game' || state.over) return;
-    if (pointerDown || e.pointerType === 'mouse') state.cloudX = clampCloud(toView(e).x);
-  });
-  const release = (e) => {
-    if (!pointerDown) return;
-    pointerDown = false;
-    if (screen === 'game' && !state.over) {
-      state.cloudX = clampCloud(toView(e).x);
-      drop();
+    const x = toView(e).x;
+    if (e.pointerType === 'mouse') {
+      state.cloudX = clampCloud(x);
+    } else if (touch && e.pointerId === touch.id) {
+      state.cloudX = clampCloud(clampCloud(state.cloudX) + (x - touch.lastX));
+      touch.lastX = x;
+      if (Math.abs(x - touch.startX) > TAP_SLOP) touch.moved = true;
     }
-  };
-  canvas.addEventListener('pointerup', release);
-  canvas.addEventListener('pointercancel', () => { pointerDown = false; });
+  });
+  canvas.addEventListener('pointerup', (e) => {
+    if (e.pointerType === 'mouse') {
+      if (!pointerDown) return;
+      pointerDown = false;
+      if (screen === 'game' && !state.over) {
+        state.cloudX = clampCloud(toView(e).x);
+        drop();
+      }
+      return;
+    }
+    if (!touch || e.pointerId !== touch.id) return;
+    const tap = !touch.moved && performance.now() - touch.startT < TAP_TIME;
+    touch = null;
+    if (tap && screen === 'game' && !state.over) drop();
+  });
+  canvas.addEventListener('pointercancel', (e) => {
+    pointerDown = false;
+    if (touch && e.pointerId === touch.id) touch = null;
+  });
 
   const keys = new Set();
   window.addEventListener('keydown', (e) => {
