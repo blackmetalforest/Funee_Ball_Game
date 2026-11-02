@@ -1,8 +1,8 @@
 # Funee Ball Game
 
-**Version 0.1.0** · Play: <https://blackmetalforest.github.io/Funee_Ball_Game/>
+**Version 0.3.0** · Play: <https://blackmetalforest.github.io/Funee_Ball_Game/>
 
-A pixel-art "drop and merge" ball game for the browser. Drop balls from the cloud; two
+A "drop and merge" ball game for the browser, drawn with clean vector shapes. Drop balls from the cloud; two
 balls of the same kind merge into the next size up. Two beach balls (the largest) cancel each
 other out. The game ends when the pile sticks out over the rim of the box for about 3.7 seconds.
 
@@ -23,6 +23,16 @@ Then open <http://localhost:8048>. Opening `index.html` directly also works.
 - **Mouse:** the cloud follows the cursor. Click to drop.
 - **Keyboard:** ← / → (or A / D) to move, Space / ↓ / Enter to drop.
 
+## Debug panel
+
+Tap the faint gear in the bottom-left corner (or press <kbd>`</kbd>) to open the debug panel.
+Every value applies live: gravity, drag, bounce, friction, masses, physics rate, game speed,
+drop delay, game-over timing, scoring, controls, ball sizes and colours, plus display aids
+(a theme picker: Default with plain balls, or Debug with a spin line through each ball; size
+numbers, velocity arrows, countdown, stats) and cheats (god mode, pause,
+single-step, forced ball type, auto-drop, spawn any ball, edit the score, shake, clear, end the
+game). Changed values are highlighted, remembered on the device, and can be reset in one tap.
+
 ## Rules and numbers
 
 | # | Ball       | Size (pt) | Points for merging two |
@@ -40,10 +50,11 @@ Then open <http://localhost:8048>. Opening `index.html` directly also works.
 | 11 | Beach ball | 172      | 10,240 (both disappear) |
 
 - Only the five smallest balls are dropped, chosen at random.
-- The next ball loads once the dropped ball touches something, and no sooner than 0.75 s after the drop.
+- The next ball loads once the dropped ball touches something, and no sooner than 0.5 s after the drop.
 - Gravity is 1434 pt/s² with linear damping of 1.06/s and restitution of about 0.25.
 - A merged ball appears at the midpoint of the pair. The two old balls hollow out into rings over 0.1 s.
-- High scores (top 10) are stored in the browser's `localStorage`.
+- Highscores (top 10) are stored in the browser's `localStorage`, each with an icon of the largest
+  ball made in that game (for beach balls, "2x", "3x"… when more than one was made).
 
 Balls are drawn as plain circles in each ball's main colour, at exactly their physics radius.
 All layout is in iPhone points (393×852), rendered internally at 3 px/pt and scaled to fit the window.
