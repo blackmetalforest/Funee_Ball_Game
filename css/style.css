@@ -1,5 +1,6 @@
 html, body {
   margin: 0;
+  -webkit-touch-callout: none;
   height: 100%;
   background: #000;
   overflow: hidden;
@@ -17,4 +18,5 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }

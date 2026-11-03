@@ -7,7 +7,7 @@
   'use strict';
 
   // ---------------------------------------------------------------- constants
-  const VERSION = '0.3.5';
+  const VERSION = '0.3.6';
   const REPO_URL = 'https://github.com/blackmetalforest/Funee_Ball_Game';
   const VIEW_W = 393;
   const VIEW_H = 852;
@@ -101,9 +101,8 @@
     positionIterations: 20,
     timeScale: 1,               // < 1 = slow motion
     // gameplay
-    dropDelay: 0.5,             // s, minimum time between drops
-    nextBallTimeout: 3,         // s, load the next ball even if the dropped one never lands
-    gameOverTime: 3.66,         // s the pile may stick out over the rim
+    dropDelay: 0.3,             // s after a drop until the next ball is ready
+    gameOverTime: 10,           // s the pile may stick out over the rim
     rimY: 223,                  // pt, game-over line
     heldY: 190,                 // pt, centre of the ball under the cloud
     dropSpin: 1,                // rad/s, each drop gets this much spin in a random direction
@@ -281,7 +280,6 @@
       for (const f of [contact.getFixtureA(), contact.getFixtureB()]) {
         const b = f.getBody().getUserData();
         if (b) b.landed = true;
-        if (b && b === state.dropped) state.loadNext = true;
       }
     });
 
@@ -292,8 +290,7 @@
       current: randTier(),
       next: randTier(),
       cloudX: (WALL_L + WALL_R) / 2,
-      dropped: null,          // ball waiting for its first contact
-      loadNext: false,
+      dropped: null,          // most recent ball, until the next one is loaded
       dangerTime: 0,
       over: false,
       overTime: 0,
@@ -375,7 +372,6 @@
     state.dropped.droppedAt = state.time;
     state.started = true;
     state.current = null;
-    state.loadNext = false;
   }
 
   function processMerges() {
@@ -394,7 +390,6 @@
       const mx = (pa.x + pb.x) / 2 * U, my = (pa.y + pb.y) / 2 * U;
       const va = a.body.getLinearVelocity(), vb = b.body.getLinearVelocity();
       const vx = (va.x + vb.x) / 2, vy = (va.y + vb.y) / 2;
-      if (state.dropped === a || state.dropped === b) state.loadNext = true;
       removeBall(a);
       removeBall(b);
       state.score += points(tier);
@@ -411,7 +406,6 @@
 
   function loadNextBall() {
     state.dropped = null;
-    state.loadNext = false;
     state.current = state.next;
     state.next = randTier();
     state.cloudX = clampCloud(state.cloudX);
@@ -434,10 +428,8 @@
     world.step(dt, Math.round(CFG.velocityIterations), Math.round(CFG.positionIterations));
     processMerges();
 
-    const sinceDrop = state.dropped ? state.time - state.dropped.droppedAt : 0;
-    if (state.dropped && sinceDrop >= CFG.dropDelay && (state.loadNext || sinceDrop > CFG.nextBallTimeout)) {
-      loadNextBall();
-    }
+    // the next ball is ready a fixed time after each drop
+    if (state.dropped && state.time - state.dropped.droppedAt >= CFG.dropDelay) loadNextBall();
 
     if (CFG.autoDrop && state.current != null && state.time - state.lastAutoDrop >= CFG.autoDropInterval) {
       state.lastAutoDrop = state.time;
@@ -679,25 +671,21 @@
     }
   }
 
-  // Small, faint hotspot in the bottom-left corner that opens the debug panel.
-  const HOTSPOT = { x: 0, y: VIEW_H - 48, w: 48, h: 48 };
-  function drawHotspot() {
-    ctx.save();
-    ctx.globalAlpha = debugOpen() ? 0.7 : 0.22;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.5;
-    const cx = 20, cy = VIEW_H - 22;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-    ctx.stroke();
-    for (let i = 0; i < 8; i++) {
-      const a = i * Math.PI / 4;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(a) * 7, cy + Math.sin(a) * 7);
-      ctx.lineTo(cx + Math.cos(a) * 10, cy + Math.sin(a) * 10);
-      ctx.stroke();
+  // The version label in the bottom-right corner of the game screen doubles as a hidden debug
+  // button: press and hold it for 1 s to open the panel. After that, a plain tap opens it until
+  // the page is reloaded. The press has to start on the label (sliding onto it doesn't count).
+  const VERSION_HIT = { x: VIEW_W - 64, y: VIEW_H - 44, w: 64, h: 44 };
+  const DEBUG_HOLD_MS = 1000;
+  let debugUnlocked = false;
+  let versionHold = null;    // { id, t0, opened }
+  const onVersion = (p) => p.x >= VERSION_HIT.x && p.x <= VERSION_HIT.x + VERSION_HIT.w &&
+    p.y >= VERSION_HIT.y && p.y <= VERSION_HIT.y + VERSION_HIT.h;
+  function checkVersionHold() {
+    if (versionHold && !versionHold.opened && performance.now() - versionHold.t0 >= DEBUG_HOLD_MS) {
+      versionHold.opened = true;
+      debugUnlocked = true;
+      toggleDebug();
     }
-    ctx.restore();
   }
 
   function drawButton(y, kind, label, x = BTN_X, w = BTN_W, h = BTN_H) {
@@ -715,6 +703,15 @@
     ctx.lineWidth = 1.5;
     ctx.stroke();
     text(label, x + w / 2, y + h / 2 + 1, { size: 22, weight: 700, color: blue ? COL.white : COL.textDark });
+  }
+
+  // While the pile is over the limit: whole seconds left until game over (10, 9, 8 ...),
+  // shown where the "Game Over" text appears.
+  function drawCountdown() {
+    if (state.dangerTime <= 0) return;
+    const left = Math.ceil(CFG.gameOverTime - state.dangerTime);
+    if (left < 1) return;   // only reachable in god mode
+    text(String(left), VIEW_W / 2, GO_TEXT_Y, { size: 28, weight: 800, color: COL.gameOver });
   }
 
   // Game over: the board stays visible; red text under the score and two buttons below the box.
@@ -840,8 +837,8 @@
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
     const p = toView(e);
-    if (p.x >= HOTSPOT.x && p.x <= HOTSPOT.x + HOTSPOT.w && p.y >= HOTSPOT.y && p.y <= HOTSPOT.y + HOTSPOT.h) {
-      toggleDebug();
+    if (screen === 'game' && onVersion(p)) {
+      versionHold = { id: e.pointerId, t0: performance.now(), opened: false };
       return;
     }
     if (screen === 'title') {
@@ -882,6 +879,10 @@
     }
   });
   canvas.addEventListener('pointermove', (e) => {
+    if (versionHold && e.pointerId === versionHold.id) {
+      if (!onVersion(toView(e))) versionHold = null;   // moved off the label: cancel
+      return;
+    }
     if (screen !== 'game' || state.over) return;
     const x = toView(e).x;
     if (e.pointerType === 'mouse') {
@@ -893,6 +894,12 @@
     }
   });
   canvas.addEventListener('pointerup', (e) => {
+    if (versionHold && e.pointerId === versionHold.id) {
+      const h = versionHold;
+      versionHold = null;
+      if (!h.opened && debugUnlocked && onVersion(toView(e))) toggleDebug();
+      return;
+    }
     if (e.pointerType === 'mouse') {
       if (!pointerDown) return;
       pointerDown = false;
@@ -909,8 +916,16 @@
   });
   canvas.addEventListener('pointercancel', (e) => {
     pointerDown = false;
+    if (versionHold && e.pointerId === versionHold.id) versionHold = null;
     if (touch && e.pointerId === touch.id) touch = null;
   });
+
+  // Phones turn a finger held still into a long-press gesture (iOS text loupe / callout, Android
+  // context menu), which swallows the touch and can make the page look frozen. Block those.
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+  canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+  canvas.addEventListener('touchend', (e) => { if (screen !== 'title') e.preventDefault(); }, { passive: false });
 
   const keys = new Set();
   const typing = (e) => e.target && e.target.closest && e.target.closest('input, select, textarea, #debug');
@@ -932,7 +947,17 @@
   // ---------------------------------------------------------------- loop
   let last = performance.now();
   let acc = 0;
+  let frameErrorLogged = false;
   function frame(now) {
+    // schedule the next frame first, so an unexpected error can never stop the game loop
+    requestAnimationFrame(frame);
+    try {
+      tick(now);
+    } catch (err) {
+      if (!frameErrorLogged) { frameErrorLogged = true; console.error('Funee Ball Game frame error:', err); }
+    }
+  }
+  function tick(now) {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
 
@@ -959,9 +984,9 @@
       drawPlayfield();
       drawHud();
       if (state.over) drawGameOver();
+      else drawCountdown();
     }
-    drawHotspot();
-    requestAnimationFrame(frame);
+    checkVersionHold();
   }
 
   // ---------------------------------------------------------------- boot
@@ -971,7 +996,6 @@
   // ---------------------------------------------------------------- debug API
   // Used by the debug panel (js/debug.js) and tests.
   let debugPanel = null;
-  const debugOpen = () => !!(debugPanel && debugPanel.isOpen());
   function toggleDebug() { if (debugPanel) debugPanel.toggle(); }
 
   window.FuneeGame = {

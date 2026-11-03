@@ -1,10 +1,11 @@
 # Funee Ball Game
 
-**Version 0.3.5** · Play: <https://blackmetalforest.github.io/Funee_Ball_Game/>
+**Version 0.3.6** · Play: <https://blackmetalforest.github.io/Funee_Ball_Game/>
 
 A "drop and merge" ball game for the browser, drawn with clean vector shapes. Drop balls from the cloud; two
 balls of the same kind merge into the next size up. Two beach balls (the largest) cancel each
-other out. The game ends when the pile sticks out over the rim of the box for about 3.7 seconds.
+other out. If the pile sticks out over the rim of the box, a 10-second countdown starts; the game
+ends when it runs out (it resets as soon as the pile drops back below the rim).
 
 Plain HTML, CSS and JavaScript with no build step. Physics uses [planck.js](https://github.com/piqnt/planck.js)
 (a Box2D port), vendored in `vendor/`.
@@ -25,7 +26,9 @@ Then open <http://localhost:8048>. Opening `index.html` directly also works.
 
 ## Debug panel
 
-Tap the faint gear in the bottom-left corner (or press <kbd>`</kbd>) to open the debug panel.
+During a game, press and hold the version number in the bottom-right corner for one second (or
+press <kbd>`</kbd>) to open the debug panel. After that, a tap on it opens the panel until the page
+is reloaded.
 Every value applies live: gravity, drag, bounce, friction, masses, physics rate, game speed,
 drop delay, game-over timing, scoring, controls, ball sizes and colours, plus display aids
 (a theme picker: Default with plain balls, or Debug with a spin line through each ball; size
@@ -50,7 +53,7 @@ game). Changed values are highlighted, remembered on the device, and can be rese
 | 11 | Beach ball | 172      | 10,240 (both disappear) |
 
 - Only the five smallest balls are dropped, chosen at random.
-- The next ball loads once the dropped ball touches something, and no sooner than 0.5 s after the drop.
+- The next ball is ready 0.3 s after each drop.
 - Gravity is 1434 pt/s² with no air drag. Balls bounce off each other with restitution 0.05 and off
   the walls and floor with 0.2.
 - A merged ball appears at the midpoint of the pair. The two old balls hollow out into rings over 0.1 s.

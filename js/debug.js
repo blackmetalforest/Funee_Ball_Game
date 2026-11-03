@@ -1,6 +1,7 @@
 /* Funee Ball Game - debug panel
  *
- * Opened by tapping the faint gear in the bottom-left corner (or the ` key).
+ * Opened by pressing and holding the version label in the game's bottom-right corner for
+ * 1 s (after that a tap opens it until the page reloads), or with the ` key.
  * Every value is applied live and remembered in localStorage until reset.
  */
 (() => {
@@ -32,8 +33,7 @@
       ['positionIterations', 'Position iterations', { step: 1, min: 1, max: 100 }],
     ]],
     ['Gameplay', [
-      ['dropDelay', 'Min. time between drops', { step: 0.05, min: 0, unit: 's' }],
-      ['nextBallTimeout', 'Next ball timeout', { step: 0.1, min: 0, unit: 's' }],
+      ['dropDelay', 'Time between drops', { step: 0.05, min: 0, unit: 's' }],
       ['gameOverTime', 'Game-over delay (red warning)', { step: 0.1, min: 0, unit: 's' }],
       ['rimY', 'Game-over line height', { step: 1, unit: 'pt' }],
       ['heldY', 'Drop height (ball centre)', { step: 1, unit: 'pt' }],
