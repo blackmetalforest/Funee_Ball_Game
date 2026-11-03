@@ -1,6 +1,6 @@
 # Funee Ball Game
 
-**Version 0.3.3** · Play: <https://blackmetalforest.github.io/Funee_Ball_Game/>
+**Version 0.3.4** · Play: <https://blackmetalforest.github.io/Funee_Ball_Game/>
 
 A "drop and merge" ball game for the browser, drawn with clean vector shapes. Drop balls from the cloud; two
 balls of the same kind merge into the next size up. Two beach balls (the largest) cancel each

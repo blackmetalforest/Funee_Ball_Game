@@ -7,7 +7,7 @@
   'use strict';
 
   // ---------------------------------------------------------------- constants
-  const VERSION = '0.3.3';
+  const VERSION = '0.3.4';
   const REPO_URL = 'https://github.com/blackmetalforest/Funee_Ball_Game';
   const VIEW_W = 393;
   const VIEW_H = 852;
@@ -781,7 +781,16 @@
     text(`v${VERSION}`, VIEW_W / 2, L.y + 30, { size: 12, weight: 500, color: COL.textMuted });
   }
 
-  const HS_BACK_Y = 700;
+  const HS_BACK_Y = 728;
+  const HS_ROW = 52;                 // row spacing, fits the 50pt beach-ball icon
+  // Icon diameter on the highscores list: 9pt for the smallest ball up to 36.8pt for the
+  // largest, scaled linearly with the ball's real size.
+  const HS_ICON_MIN = 9, HS_ICON_MAX = 36.8;
+  function badgeRadius(tier) {
+    const d0 = BALLS[0].d, d1 = BALLS[MAX_TIER].d;
+    const f = d1 === d0 ? 1 : (BALLS[tier].d - d0) / (d1 - d0);
+    return (HS_ICON_MIN + f * (HS_ICON_MAX - HS_ICON_MIN)) / 2;
+  }
   // Small icon of a ball. Only the largest ball (beach ball) gets an "Nx" count on top.
   function drawBallBadge(tier, count, x, y, r) {
     drawSprite(tier, x, y, 0, r);
@@ -791,10 +800,10 @@
     ctx.arc(x, y, r - 0.5, 0, Math.PI * 2);
     ctx.stroke();
     if (tier === MAX_TIER && count > 1) {
-      ctx.font = `800 11px ${FONT}`;
+      ctx.font = `800 ${Math.max(11, Math.round(r * 0.7))}px ${FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = Math.max(3, r * 0.18);
       ctx.lineJoin = 'round';
       ctx.strokeStyle = 'rgba(0,0,0,0.85)';
       ctx.strokeText(`${count}x`, x, y + 0.5);
@@ -805,7 +814,7 @@
 
   function drawHighscores() {
     rect(0, 0, VIEW_W, VIEW_H, COL.bg);
-    const P = { x: 32, y: 110, w: VIEW_W - 64, h: 560 };
+    const P = { x: 32, y: 96, w: VIEW_W - 64, h: 616 };
     roundRect(P.x, P.y, P.w, P.h, 18);
     ctx.fillStyle = COL.panel;
     ctx.fill();
@@ -814,8 +823,8 @@
     ctx.save();
     ctx.fontVariantNumeric = 'tabular-nums';
     for (let i = 0; i < 10; i++) {
-      const y = P.y + 92 + i * 46;
-      if (i > 0) line(P.x + 24, y - 23, P.x + P.w - 24, y - 23, '#eceef3', 1);
+      const y = P.y + 92 + i * HS_ROW;
+      if (i > 0) line(P.x + 24, y - HS_ROW / 2, P.x + P.w - 24, y - HS_ROW / 2, '#eceef3', 1);
       const color = COL.textDark;
       const e = list[i];
       text(String(i + 1), P.x + 30, y, { size: 22, weight: 700, color, align: 'left' });
@@ -823,7 +832,8 @@
       text(e ? fmt(e.score) : '—', right, y, { size: 22, weight: 700, color: e ? color : COL.textMuted, align: 'right' });
       if (e && e.tier != null && e.tier >= 0 && e.tier <= MAX_TIER) {
         const w = ctx.measureText(fmt(e.score)).width;
-        drawBallBadge(e.tier, e.count, right - w - 22, y, 13);
+        const r = badgeRadius(e.tier);
+        drawBallBadge(e.tier, e.count, right - w - 10 - r, y, r);
       }
     }
     ctx.restore();
