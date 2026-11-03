@@ -7,7 +7,7 @@
   'use strict';
 
   // ---------------------------------------------------------------- constants
-  const VERSION = '0.3.4';
+  const VERSION = '0.3.5';
   const REPO_URL = 'https://github.com/blackmetalforest/Funee_Ball_Game';
   const VIEW_W = 393;
   const VIEW_H = 852;
@@ -67,6 +67,7 @@
     textDark: '#14151c',
     textMuted: '#8a8fa3',
     accent: '#2f5bff',
+    gameOver: '#ff3b5c',
   };
   const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
@@ -172,14 +173,12 @@
     return Math.max(0.01, CFG.massMin + (area(r) - a0) * (CFG.massMax - CFG.massMin) / (a1 - a0));
   }
 
-  // Game-over panel drop-in keyframes, one every 2/60 s (offset of the panel in pt)
-  const PANEL_KEYS = [-611, -268, -121, -31, 17, 32, 28, 13, 0];
-  const PANEL_KEY_DT = 2 / 60;
-
-  // Game-over panel layout
-  const PANEL = { x: 58, y: 244, w: 278, h: 368 };
+  // Buttons
   const BTN_X = 69, BTN_W = 255, BTN_H = 57;
-  const DLG_BTNS = { highscores: 400, quit: 471, retry: 543 };
+  // Game over: two buttons below the box (clear of the debug gear in the bottom-left corner)
+  const GO_BTNS = { y: 748, h: 50, highscores: { x: 36, w: 154 }, retry: { x: 203, w: 154 } };
+  const GO_TEXT_Y = 130;             // "Game Over", between the score and the cloud
+  const GO_INPUT_DELAY = 0.4;        // s before the game-over buttons react (no accidental taps)
 
   // ---------------------------------------------------------------- canvas
   const canvas = document.getElementById('game');
@@ -300,6 +299,7 @@
       overTime: 0,
       time: 0,
       lastAutoDrop: 0,
+      started: false,         // a ball has been dropped (home screen then offers "Resume")
       bestTier: -1,           // largest ball made this game
       bestCount: 0,           // how many of that ball were made
     };
@@ -373,6 +373,7 @@
     // a little spin makes a ball roll off one it lands on dead-centre, instead of balancing
     state.dropped.body.setAngularVelocity((Math.random() < 0.5 ? -1 : 1) * CFG.dropSpin);
     state.dropped.droppedAt = state.time;
+    state.started = true;
     state.current = null;
     state.loadNext = false;
   }
@@ -699,8 +700,7 @@
     ctx.restore();
   }
 
-  function drawButton(y, kind, label) {
-    const x = BTN_X, w = BTN_W, h = BTN_H;
+  function drawButton(y, kind, label, x = BTN_X, w = BTN_W, h = BTN_H) {
     const blue = kind === 'blue';
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.18)';
@@ -717,68 +717,52 @@
     text(label, x + w / 2, y + h / 2 + 1, { size: 22, weight: 700, color: blue ? COL.white : COL.textDark });
   }
 
-  function drawPanelAt(offset) {
-    const P = PANEL;
-    const y0 = P.y + offset;
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 6;
-    roundRect(P.x, y0, P.w, P.h, 18);
-    ctx.fillStyle = COL.panel;
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function panelOffset(t) {
-    const k = t / PANEL_KEY_DT;
-    const i = Math.floor(k);
-    if (i >= PANEL_KEYS.length - 1) return 0;
-    const f = k - i;
-    return PANEL_KEYS[i] + (PANEL_KEYS[i + 1] - PANEL_KEYS[i]) * f;
-  }
-
+  // Game over: the board stays visible; red text under the score and two buttons below the box.
   function drawGameOver() {
-    rect(0, 0, VIEW_W, VIEW_H, 'rgba(0,0,0,0.5)');
-    const o = Math.round(panelOffset(state.overTime));
-    drawPanelAt(o);
-    text('Game Over', VIEW_W / 2, 287 + o, { size: 32, weight: 800, color: COL.accent });
-    text(fmt(state.score), VIEW_W / 2, 346 + o, { size: 30, weight: 800, color: COL.textDark });
-    drawButton(DLG_BTNS.highscores + o, 'grey', 'Highscores');
-    drawButton(DLG_BTNS.quit + o, 'grey', 'Quit');
-    drawButton(DLG_BTNS.retry + o, 'blue', 'Retry');
+    text('Game Over', VIEW_W / 2, GO_TEXT_Y, { size: 28, weight: 800, color: COL.gameOver });
+    const B = GO_BTNS;
+    drawButton(B.y, 'grey', 'Highscores', B.highscores.x, B.highscores.w, B.h);
+    drawButton(B.y, 'blue', 'Retry', B.retry.x, B.retry.w, B.h);
   }
 
   // ---------------------------------------------------------------- screens
   let screen = 'title';     // 'title' | 'game' | 'highscores'
   let boardReturn = 'title';
 
-  const TITLE_BTNS = { play: 560, highscores: 630 };
+  const TITLE_BTNS = { play: 540, highscores: 610, newGame: 680 };
+  const TITLE_FOOT_Y = 800;          // version + "View on GitHub" line
+  let titleLink = null;              // clickable area of "View on GitHub", set when drawn
+  const inProgress = () => !!(state && state.started && !state.over);
 
-  const TITLE_LINK = { y: 740, h: 36, w: 200 };   // clickable 'View on GitHub' area
   function drawTitle() {
     rect(0, 0, VIEW_W, VIEW_H, COL.bg);
     text('Funee Ball Game', VIEW_W / 2, 120, { size: 36, weight: 800 });
     const best = (loadScores()[0] || {}).score;
     if (best) text(`Best  ${fmt(best)}`, VIEW_W / 2, 160, { size: 18, weight: 600, color: COL.textMuted });
     // ball showcase
-    drawSprite(10, VIEW_W / 2, 310);
+    drawSprite(10, VIEW_W / 2, 300);
     const row = [0, 1, 2, 3, 4];
     let x = 70;
     for (const tier of row) {
       const r = radius(tier);
-      drawSprite(tier, x + r, 470 - r);
+      drawSprite(tier, x + r, 460 - r);
       x += BALLS[tier].d + 8;
     }
-    drawButton(TITLE_BTNS.play, 'blue', 'Play');
+    drawButton(TITLE_BTNS.play, 'blue', inProgress() ? 'Resume' : 'Play');
     drawButton(TITLE_BTNS.highscores, 'grey', 'Highscores');
-    // GitHub link + version
-    const L = TITLE_LINK;
-    text('View on GitHub', VIEW_W / 2, L.y, { size: 16, weight: 600, color: '#8fa6ff' });
-    ctx.font = `600 16px ${FONT}`;
-    const w = ctx.measureText('View on GitHub').width;
-    line(VIEW_W / 2 - w / 2, L.y + 11, VIEW_W / 2 + w / 2, L.y + 11, '#8fa6ff', 1);
-    text(`v${VERSION}`, VIEW_W / 2, L.y + 30, { size: 12, weight: 500, color: COL.textMuted });
+    if (inProgress()) drawButton(TITLE_BTNS.newGame, 'grey', 'New Game');
+    // footer: version and GitHub link on one line, same font and size
+    const ver = `v${VERSION}`, sep = '   ·   ', link = 'View on GitHub';
+    ctx.font = `500 12px ${FONT}`;
+    const wv = ctx.measureText(ver).width, ws = ctx.measureText(sep).width, wl = ctx.measureText(link).width;
+    let fx = VIEW_W / 2 - (wv + ws + wl) / 2;
+    const y = TITLE_FOOT_Y;
+    text(ver, fx, y, { size: 12, weight: 500, color: COL.textMuted, align: 'left' });
+    text(sep, fx + wv, y, { size: 12, weight: 500, color: COL.textMuted, align: 'left' });
+    fx += wv + ws;
+    text(link, fx, y, { size: 12, weight: 500, color: '#8fa6ff', align: 'left' });
+    line(fx, y + 8, fx + wl, y + 8, '#8fa6ff', 0.75);
+    titleLink = { x: fx - 6, y: y - 14, w: wl + 12, h: 28 };
   }
 
   const HS_BACK_Y = 728;
@@ -862,9 +846,10 @@
     }
     if (screen === 'title') {
       if (inBtn(p, TITLE_BTNS.play)) {
-        if (!state || state.over) newGame();
+        if (!inProgress()) newGame();
         screen = 'game';
       } else if (inBtn(p, TITLE_BTNS.highscores)) { boardReturn = 'title'; screen = 'highscores'; }
+      else if (inProgress() && inBtn(p, TITLE_BTNS.newGame)) { newGame(); screen = 'game'; }
       return;
     }
     if (screen === 'highscores') {
@@ -872,14 +857,15 @@
       return;
     }
     // game
+    if (p.x < 70 && p.y > 60 && p.y < 125) { screen = 'title'; return; }
     if (state.over) {
-      if (state.overTime < PANEL_KEYS.length * PANEL_KEY_DT) return;
-      if (inBtn(p, DLG_BTNS.retry)) newGame();
-      else if (inBtn(p, DLG_BTNS.quit)) { newGame(); screen = 'title'; }
-      else if (inBtn(p, DLG_BTNS.highscores)) { boardReturn = 'game'; screen = 'highscores'; }
+      if (state.overTime < GO_INPUT_DELAY) return;
+      const B = GO_BTNS;
+      const hit = (b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= B.y && p.y <= B.y + B.h;
+      if (hit(B.retry)) newGame();
+      else if (hit(B.highscores)) { boardReturn = 'game'; screen = 'highscores'; }
       return;
     }
-    if (p.x < 70 && p.y > 60 && p.y < 125) { screen = 'title'; return; }
     if (e.pointerType === 'mouse') {
       pointerDown = true;
       state.cloudX = clampCloud(p.x);
@@ -889,9 +875,9 @@
   });
   // The GitHub link opens on 'click' (phones only allow opening links from a finished tap).
   canvas.addEventListener('click', (e) => {
-    if (screen !== 'title') return;
-    const p = toView(e);
-    if (Math.abs(p.x - VIEW_W / 2) < TITLE_LINK.w / 2 && Math.abs(p.y - TITLE_LINK.y) < TITLE_LINK.h / 2) {
+    if (screen !== 'title' || !titleLink) return;
+    const p = toView(e), L = titleLink;
+    if (p.x >= L.x && p.x <= L.x + L.w && p.y >= L.y && p.y <= L.y + L.h) {
       window.open(REPO_URL, '_blank', 'noopener');
     }
   });
@@ -933,7 +919,8 @@
     if (e.code === 'Backquote') { toggleDebug(); return; }
     if (screen !== 'game' || state.over) {
       if (e.code === 'Enter' || e.code === 'Space') {
-        if (screen === 'title' || (state && state.over)) { newGame(); screen = 'game'; }
+        if (screen === 'title') { if (!inProgress()) newGame(); screen = 'game'; }
+        else if (state && state.over && state.overTime >= GO_INPUT_DELAY) newGame();
       }
       return;
     }
