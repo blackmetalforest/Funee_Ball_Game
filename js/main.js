@@ -7,6 +7,8 @@
   'use strict';
 
   // ---------------------------------------------------------------- constants
+  const VERSION = '0.3.3';
+  const REPO_URL = 'https://github.com/blackmetalforest/Funee_Ball_Game';
   const VIEW_W = 393;
   const VIEW_H = 852;
 
@@ -74,7 +76,7 @@
   // HUD
   const ARROW_POS = { x: 32, y: 91 };   // centre of the back chevron
   const SCORE_Y = 91;                    // vertical centre of the score
-  const NEXT_POS = { x: 362, y: 91 };
+  const NEXT_POS = { x: 350, y: 91 };   // centre of the next-ball icon (kept on screen for big balls)
 
   // The physics world uses 1 unit = 10pt.
   const U = 10;
@@ -87,7 +89,7 @@
     gravity: 1434,              // pt/s^2
     linearDamping: 0,           // 1/s, air drag
     angularDamping: 1.0,        // 1/s, spin drag
-    restitution: 0.5,           // ball-to-ball bounce
+    restitution: 0.05,          // ball-to-ball bounce
     friction: 0.2,              // ball-to-ball grip
     wallRestitution: 0.2,       // walls/floor bounce
     wallFriction: 0.2,          // walls/floor grip
@@ -583,7 +585,9 @@
     ctx.fontVariantNumeric = 'tabular-nums';
     text(fmt(state.score), VIEW_W / 2, SCORE_Y, { size: 30, weight: 800 });
     ctx.restore();
-    drawSprite(state.next, NEXT_POS.x, NEXT_POS.y);
+    const nr = radius(state.next);
+    drawSprite(state.next, Math.min(NEXT_POS.x, VIEW_W - 6 - nr), NEXT_POS.y);
+    text(`v${VERSION}`, VIEW_W - 10, VIEW_H - 22, { size: 11, weight: 500, color: COL.textMuted, align: 'right' });
   }
 
   function drawPlayfield() {
@@ -751,6 +755,7 @@
 
   const TITLE_BTNS = { play: 560, highscores: 630 };
 
+  const TITLE_LINK = { y: 740, h: 36, w: 200 };   // clickable 'View on GitHub' area
   function drawTitle() {
     rect(0, 0, VIEW_W, VIEW_H, COL.bg);
     text('Funee Ball Game', VIEW_W / 2, 120, { size: 36, weight: 800 });
@@ -767,6 +772,13 @@
     }
     drawButton(TITLE_BTNS.play, 'blue', 'Play');
     drawButton(TITLE_BTNS.highscores, 'grey', 'Highscores');
+    // GitHub link + version
+    const L = TITLE_LINK;
+    text('View on GitHub', VIEW_W / 2, L.y, { size: 16, weight: 600, color: '#8fa6ff' });
+    ctx.font = `600 16px ${FONT}`;
+    const w = ctx.measureText('View on GitHub').width;
+    line(VIEW_W / 2 - w / 2, L.y + 11, VIEW_W / 2 + w / 2, L.y + 11, '#8fa6ff', 1);
+    text(`v${VERSION}`, VIEW_W / 2, L.y + 30, { size: 12, weight: 500, color: COL.textMuted });
   }
 
   const HS_BACK_Y = 700;
@@ -863,6 +875,14 @@
       state.cloudX = clampCloud(p.x);
     } else if (!touch) {
       touch = { id: e.pointerId, startX: p.x, lastX: p.x, startT: performance.now(), moved: false };
+    }
+  });
+  // The GitHub link opens on 'click' (phones only allow opening links from a finished tap).
+  canvas.addEventListener('click', (e) => {
+    if (screen !== 'title') return;
+    const p = toView(e);
+    if (Math.abs(p.x - VIEW_W / 2) < TITLE_LINK.w / 2 && Math.abs(p.y - TITLE_LINK.y) < TITLE_LINK.h / 2) {
+      window.open(REPO_URL, '_blank', 'noopener');
     }
   });
   canvas.addEventListener('pointermove', (e) => {

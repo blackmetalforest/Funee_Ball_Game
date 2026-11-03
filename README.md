@@ -1,6 +1,6 @@
 # Funee Ball Game
 
-**Version 0.3.1** · Play: <https://blackmetalforest.github.io/Funee_Ball_Game/>
+**Version 0.3.3** · Play: <https://blackmetalforest.github.io/Funee_Ball_Game/>
 
 A "drop and merge" ball game for the browser, drawn with clean vector shapes. Drop balls from the cloud; two
 balls of the same kind merge into the next size up. Two beach balls (the largest) cancel each
@@ -51,7 +51,7 @@ game). Changed values are highlighted, remembered on the device, and can be rese
 
 - Only the five smallest balls are dropped, chosen at random.
 - The next ball loads once the dropped ball touches something, and no sooner than 0.5 s after the drop.
-- Gravity is 1434 pt/s² with no air drag. Balls bounce off each other with restitution 0.5 and off
+- Gravity is 1434 pt/s² with no air drag. Balls bounce off each other with restitution 0.05 and off
   the walls and floor with 0.2.
 - A merged ball appears at the midpoint of the pair. The two old balls hollow out into rings over 0.1 s.
 - Highscores (top 10) are stored in the browser's `localStorage`, each with an icon of the largest
