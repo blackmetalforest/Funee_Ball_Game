@@ -85,11 +85,11 @@
   const DEFAULTS = Object.freeze({
     // physics
     gravity: 1434,              // pt/s^2
-    linearDamping: 1.06,        // 1/s, air drag
+    linearDamping: 0,           // 1/s, air drag
     angularDamping: 1.0,        // 1/s, spin drag
-    restitution: 0.25,          // ball-to-ball bounce
+    restitution: 0.5,           // ball-to-ball bounce
     friction: 0.2,              // ball-to-ball grip
-    wallRestitution: 0.25,      // walls/floor bounce
+    wallRestitution: 0.2,       // walls/floor bounce
     wallFriction: 0.2,          // walls/floor grip
     massMin: 30,                // mass of the smallest ball
     massMax: 232.35,            // mass of the beach ball
@@ -266,6 +266,15 @@
     world = new pl.World({ gravity: pl.Vec2(0, CFG.gravity / U) });
     walls = null;
     buildWalls();
+
+    // The engine would mix two surfaces' bounce by taking the larger value, so a ball against a
+    // wall or the floor would ignore the wall settings. Use the wall/floor values for those contacts.
+    world.on('pre-solve', (contact) => {
+      if (contact.getFixtureA().getBody() === walls || contact.getFixtureB().getBody() === walls) {
+        contact.setRestitution(CFG.wallRestitution);
+        contact.setFriction(CFG.wallFriction);
+      }
+    });
 
     world.on('begin-contact', (contact) => {
       for (const f of [contact.getFixtureA(), contact.getFixtureB()]) {
